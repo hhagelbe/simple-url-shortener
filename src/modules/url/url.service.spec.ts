@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { PrismaService } from '../../prisma/prisma.service';
-import { AMOUNT_OF_UNIQUE_CHARACTERS, UrlService } from './url.service';
+import { AMOUNT_OF_UNIQUE_CODE_CHARACTERS, APP_URL } from '../../utils/constants';
+import { UrlService } from './url.service';
 
 describe('UrlService', () => {
   let urlService: UrlService;
@@ -34,7 +35,7 @@ describe('UrlService', () => {
   describe('generateUniqueCode', () => {
     it('should generate a unique code with the correct length', () => {
       const code = UrlService.generateUniqueCode();
-      expect(code).toHaveLength(AMOUNT_OF_UNIQUE_CHARACTERS);
+      expect(code).toHaveLength(AMOUNT_OF_UNIQUE_CODE_CHARACTERS);
       expect(typeof code).toBe('string');
     });
 
@@ -59,8 +60,14 @@ describe('UrlService', () => {
       jest.spyOn(prismaService.url, 'findUnique').mockResolvedValueOnce(existingUrl);
 
       const result = await urlService.createShortCode('https://example.com');
-      expect(result).toEqual(existingUrl);
-      expect(prismaService.url.findUnique).toHaveBeenCalledWith({ where: { original: 'https://example.com' } });
+      expect(result).toEqual({
+        code: 'ABC123',
+        originalUrl: 'https://example.com',
+        shortUrl: `${APP_URL}/ABC123`
+      });
+      expect(prismaService.url.findUnique).toHaveBeenCalledWith({
+        where: { original: 'https:&#x2F;&#x2F;example.com' }
+      });
     });
 
     it('should create and return a new short code if the URL does not exist', async () => {
@@ -82,12 +89,37 @@ describe('UrlService', () => {
 
       // Call the createShortCode method and assert the result.
       const result = await urlService.createShortCode('https://newexample.com');
-      expect(result).toEqual({ id: mockCode, original: 'https://newexample.com', createdAt });
+      expect(result).toEqual({ code: 'XYZ789', originalUrl: 'https://newexample.com', shortUrl: `${APP_URL}/XYZ789` });
 
       // Ensure the create method was called with the expected arguments.
       expect(prismaService.url.create).toHaveBeenCalledWith({
-        data: { id: mockCode, original: 'https://newexample.com' }
+        data: { id: mockCode, original: 'https:&#x2F;&#x2F;newexample.com' }
       });
+    });
+  });
+
+  describe('findByCode', () => {
+    it('should return the correct URL DTO if the code exists', async () => {
+      const mockUrlEntry = { id: 'XYZ789', original: 'https://example.com', createdAt: new Date() };
+      jest.spyOn(prismaService.url, 'findUnique').mockResolvedValueOnce(mockUrlEntry);
+
+      const result = await urlService.findByCode('XYZ789');
+      expect(result).toEqual({
+        code: 'XYZ789',
+        shortUrl: `${APP_URL}/XYZ789`,
+        originalUrl: 'https://example.com'
+      });
+
+      expect(prismaService.url.findUnique).toHaveBeenCalledWith({ where: { id: 'XYZ789' } });
+    });
+
+    it('should return null if the code does not exist', async () => {
+      jest.spyOn(prismaService.url, 'findUnique').mockResolvedValueOnce(null);
+
+      const result = await urlService.findByCode('NONEXISTENT');
+      expect(result).toBeNull();
+
+      expect(prismaService.url.findUnique).toHaveBeenCalledWith({ where: { id: 'NONEXISTENT' } });
     });
   });
 });

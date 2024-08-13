@@ -1,50 +1,66 @@
-import { Body, Controller, Get, HttpStatus, NotFoundException, Param, Post, Query, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpStatus,
+  NotFoundException,
+  Param,
+  Post,
+  Query,
+  Res,
+  UsePipes,
+  ValidationPipe
+} from '@nestjs/common';
 import { Response } from 'express';
-import { Url } from '@prisma/client';
 
 import { UrlService } from './url.service';
 import CreateShortUrlDto from './dto/url.create.dto';
-import GetUrlDto from './dto/url.get.dto';
-import { APP_URL } from '../../utils/constants';
+import UrlDto from './dto/url.dto';
+import { CodeValidationPipe } from './pipes/url.code-validation.pipe';
 
 @Controller()
 export class UrlController {
   constructor(private readonly urlService: UrlService) {}
 
   @Post('shorten')
-  public async createShortUrl(@Body() dto: CreateShortUrlDto): Promise<GetUrlDto> {
+  public async createShortUrl(@Body() dto: CreateShortUrlDto): Promise<UrlDto> {
     const entry = await this.urlService.createShortCode(dto.url);
 
-    return this.toApiResponse(entry);
+    return entry;
   }
 
   @Get('original')
-  public async getByCode(@Query('code') code: string): Promise<GetUrlDto> {
+  @UsePipes(new ValidationPipe({ transform: true }))
+  public async getByCode(@Query('code', CodeValidationPipe) code: string): Promise<UrlDto> {
     const entry = await this.urlService.findByCode(code);
 
     if (!entry) {
       throw new NotFoundException('Code not found');
     }
 
-    return this.toApiResponse(entry);
+    return entry;
   }
 
   @Get(':code')
-  public async redirectByCode(@Param('code') code: string, @Res() response: Response) {
-    const entry = await this.urlService.findByCode(code);
+  public async redirectByCode(@Param('code', CodeValidationPipe) code: string, @Res() response: Response) {
+    try {
+      const entry = await this.urlService.findByCode(code);
 
-    if (!entry) {
-      return response.status(HttpStatus.NOT_FOUND).send('URL not found');
+      if (!entry) {
+        return response.status(HttpStatus.NOT_FOUND).json({
+          statusCode: HttpStatus.NOT_FOUND,
+          message: 'URL not found',
+          error: 'Not Found'
+        });
+      }
+
+      return response.redirect(HttpStatus.FOUND, entry.originalUrl);
+    } catch (error) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: 'Error during redirection',
+        error: 'Internal Server Error'
+      });
     }
-
-    return response.redirect(HttpStatus.FOUND, entry.original);
-  }
-
-  private toApiResponse(entry: Url) {
-    return {
-      code: entry.id,
-      shortUrl: `${APP_URL}/${entry.id}`,
-      originalUrl: entry.original
-    };
   }
 }

@@ -1,8 +1,10 @@
 import { IsAlphanumeric, IsString, IsUrl, Length } from 'class-validator';
 
-export class GetUrlDto {
+import { AMOUNT_OF_UNIQUE_CODE_CHARACTERS } from '../../../utils/constants';
+
+export class UrlDto {
   @IsAlphanumeric()
-  @Length(6, 6)
+  @Length(AMOUNT_OF_UNIQUE_CODE_CHARACTERS, AMOUNT_OF_UNIQUE_CODE_CHARACTERS)
   public code: string;
 
   @IsString()
@@ -14,4 +16,4 @@ export class GetUrlDto {
   public originalUrl: string;
 }
 
-export default GetUrlDto;
+export default UrlDto;
