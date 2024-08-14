@@ -1,14 +1,8 @@
 import { BadRequestException, Injectable, PipeTransform } from '@nestjs/common';
 import { plainToClass } from 'class-transformer';
-import { IsAlphanumeric, Length, validate } from 'class-validator';
+import { validate } from 'class-validator';
 
-import { AMOUNT_OF_UNIQUE_CODE_CHARACTERS } from '../../../utils/constants';
-
-class CodeDto {
-  @IsAlphanumeric()
-  @Length(AMOUNT_OF_UNIQUE_CODE_CHARACTERS, AMOUNT_OF_UNIQUE_CODE_CHARACTERS)
-  code: string;
-}
+import CodeDto from '../dto/url.code.dto';
 
 @Injectable()
 export class CodeValidationPipe implements PipeTransform {

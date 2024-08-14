@@ -1,12 +1,8 @@
-import { IsAlphanumeric, IsString, IsUrl, Length } from 'class-validator';
+import { IsString, IsUrl } from 'class-validator';
 
-import { AMOUNT_OF_UNIQUE_CODE_CHARACTERS } from '../../../utils/constants';
+import CodeDto from './url.code.dto';
 
-export class UrlDto {
-  @IsAlphanumeric()
-  @Length(AMOUNT_OF_UNIQUE_CODE_CHARACTERS, AMOUNT_OF_UNIQUE_CODE_CHARACTERS)
-  public code: string;
-
+export class UrlDto extends CodeDto {
   @IsString()
   @IsUrl(undefined, { message: 'Not a valid url.' })
   public shortUrl: string;
